@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HA Monitor</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 15px;
+            background: #0f0f0f;
+            color: #eee;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0a84ff;
+        }
+
+        h2 {
+            margin: 30px 0 12px;
+            color: #0a84ff;
+            border-bottom: 2px solid #0a84ff;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            margin: 18px 0 10px;
+            color: #4da6ff;
+            padding-left: 8px;
+            border-left: 3px solid #4da6ff;
+        }
+
+        .sensor {
+            background: #1f1f1f;
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 4px solid #0a84ff;
+        }
+
+        .switch-item {
+            background: #1f1f1f;
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 4px solid #0a84ff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .name {
+            font-weight: bold;
+            color: #ccc;
+            flex: 1;
+        }
+        /*Slider switch*/
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 68px;
+            height: 34px;
+        }
+
+            .switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #6c757d;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+            .slider:before {
+                position: absolute;
+                content: "";
+                height: 26px;
+                width: 26px;
+                left: 4px;
+                bottom: 4px;
+                background-color: white;
+                transition: .3s;
+                border-radius: 50%;
+            }
+
+        input:checked + .slider {
+            background-color: #28a745;
+        }
+
+            input:checked + .slider:before {
+                transform: translateX(34px);
+            }
+
+        .value {
+            font-size: 1.35em;
+            margin-top: 4px;
+            color: #fff;
+        }
+
+        .time {
+            text-align: center;
+            color: #888;
+            margin-top: 30px;
+            font-size: 0.95em;
+        }
+
+        .error {
+            color: #ff6666;
+            padding: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Home Assistant</h1>
+    <div id="content"></div>
+    <div id="lastUpdate" class="time">Last update: —</div>
+
+    <script>
+    var showAreas = {{SHOW_AREAS}};
+    var showDevices = {{SHOW_DEVICES}};
+    var showSwitches = {{SHOW_SWITCHES}};
+
+    function pad2(n) {
+        return (n < 10 ? "0" : "") + n;
+    }
+
+    function updateTime() {
+        var now = new Date();
+        var t = pad2(now.getHours()) + ":" + pad2(now.getMinutes()) + ":" + pad2(now.getSeconds());
+        document.getElementById("lastUpdate").innerHTML = "Last update: " + t;
+    }
+
+    function toggleSwitch(entityId) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/switch/toggle", true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send(JSON.stringify({ entityId: entityId }));
+    }
+
+    function createSwitchHtml(sw) {
+        var name = sw.friendlyName || sw.entityId;
+        var checked = sw.isOn ? "checked" : "";
+        return '<div class="switch-item">' +
+               '<div class="name">' + name + '</div>' +
+               '<label class="switch">' +
+               '<input type="checkbox" ' + checked + ' onchange="toggleSwitch(\'' + sw.entityId + '\')">' +
+               '<span class="slider"></span>' +
+               '</label>' +
+               '</div>';
+    }
+
+    function updatePage(data) {
+        var html = "";
+
+        //Only sensors
+        var currentArea = null;
+        var currentDevice = null;
+        for (var i = 0; i < data.sensors.length; i++) {
+            var s = data.sensors[i];
+            if (s.entityId && s.entityId.startsWith("switch.")) continue;
+
+            var area = s.areaName || "";
+            var device = s.deviceName || "";
+
+            if (showAreas && area && area !== currentArea) {
+                html += "<h2>" + area + "</h2>";
+                currentArea = area;
+                currentDevice = null;
+            }
+            if (showDevices && device && device !== currentDevice) {
+                html += "<h3>" + device + "</h3>";
+                currentDevice = device;
+            }
+
+            var name = s.friendlyName || s.entityId;
+            var value = s.state || "—";
+            var margin = (showAreas || showDevices) ? "20px" : "0";
+
+            html += '<div class="sensor" style="margin-left:' + margin + '">' +
+                    '<div class="name">' + name + '</div>' +
+                    '<div class="value">' + value + '</div>' +
+                    '</div>';
+        }
+
+        //Only switchs
+        if (showSwitches && data.switches && data.switches.length > 0) {
+            html += "<h2>Switchs</h2>";
+            for (var i = 0; i < data.switches.length; i++) {
+                html += createSwitchHtml(data.switches[i]);
+            }
+        }
+
+        if (html === "") html = '<div class="error">No data</div>';
+        document.getElementById("content").innerHTML = html;
+    }
+
+    function loadInitialData() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/api/all", true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    updatePage(data);
+                    updateTime();
+                } catch(e) {}
+            }
+        };
+        xhr.send(null);
+    }
+
+    loadInitialData();
+
+    if (window.EventSource) {
+        var evt = new EventSource("/api/events");
+        evt.onmessage = function(e) {
+            loadInitialData();
+        };
+    }
+    </script>
+</body>
+</html>

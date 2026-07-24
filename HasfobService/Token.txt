@@ -1,0 +1,2 @@
+Copy your token into this file. 
+This file must contain only the token—nothing else.

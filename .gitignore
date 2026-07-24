@@ -1,0 +1,12 @@
+# Сборка и временные файлы .NET
+bin/
+obj/
+.vs/
+*.user
+
+# Конфигурационные файлы с возможными секретами
+appsettings.Development.json
+
+# Системные файлы
+.DS_Store
+Thumbs.db

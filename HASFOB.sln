@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HasfobService", "HasfobService\HasfobService.csproj", "{F3A92C29-81F7-FB84-5993-D3FBFE490DBB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F3A92C29-81F7-FB84-5993-D3FBFE490DBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3A92C29-81F7-FB84-5993-D3FBFE490DBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3A92C29-81F7-FB84-5993-D3FBFE490DBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A92C29-81F7-FB84-5993-D3FBFE490DBB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {28366E46-B376-4951-84A4-D01F1D28FF72}
+	EndGlobalSection
+EndGlobal

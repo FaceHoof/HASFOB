@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+
+    <!-- Home Assistant Server Configuration -->
+    
+    <!-- The base URL of your Home Assistant instance (without port) -->
+    <homeAssistantServer>http://192.168.30.38</homeAssistantServer>
+    
+    <!-- The port on which Home Assistant is running (default is usually 8123) -->
+    <homeAssistantPort>8123</homeAssistantPort>
+    
+    <!-- Full path to the text file containing your long-lived Home Assistant access token -->
+    <homeAssistantTokenFile>D:\Token.txt</homeAssistantTokenFile>
+
+    <!-- Service Configuration -->
+    
+    <!-- The local port this service will listen on for incoming connections -->
+    <servicePort>8974</servicePort>
+
+    <!-- Sensors Configuration -->
+    
+    <!-- List of Home Assistant sensor and switches entity IDs to monitor and fetch data from -->
+    <sensors>
+        <sensor>
+            <entityId>sensor.waterlevelsensor_ultrasonicwaterlevelsensor</entityId>
+            <friendlyName>Water level</friendlyName>
+            <decimalPlaces>0</decimalPlaces>
+        </sensor>
+	    <sensor>
+            <entityId>sensor.esphome_web_59d4f4_dht_1_outside_temperature</entityId>
+            <friendlyName>Outside temperature</friendlyName>
+            <decimalPlaces>1</decimalPlaces>
+        </sensor>
+	    <sensor>
+            <entityId>sensor.esphome_web_59d4f4_dht_1_outside_humidity</entityId>
+            <friendlyName>Outside humidity</friendlyName>
+            <decimalPlaces>1</decimalPlaces>
+        </sensor>
+    </sensors>
+	
+	<switches> 
+		<switch> 
+			<entityId>switch.powersoketforwaterpomp_socket_1</entityId>
+	        <friendlyName>Waterpomp</friendlyName>
+	    </switch>
+	</switches>
+
+    <!-- Update and Logging Settings -->
+    
+    <!-- How often (in seconds) the service should fetch fresh data from Home Assistant -->
+    <updateIntervalSeconds>10</updateIntervalSeconds>
+    
+    <!-- Number of days to keep log files before automatic cleanup -->
+    <logRetentionDays>30</logRetentionDays>
+
+    <showAreaNames>Y</showAreaNames>
+    <showDeviceNames>Y</showDeviceNames>
+
+</configuration>
