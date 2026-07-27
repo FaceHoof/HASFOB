@@ -36,6 +36,7 @@ At least one sensor must be configured.
 
 Example:
 
+```xml
 <sensors>
     <sensor>
         <entityId>sensor.outdoor_temperature</entityId>
@@ -47,6 +48,7 @@ Example:
         <entityId>sensor.humidity</entityId>
     </sensor>
 </sensors>
+```
 
 Sensor parameters:
 
@@ -58,9 +60,11 @@ Sensor parameters:
 
 Additionally, you can specify the sensor type inside the sensor block:
 
+```xml
 <type>Scale</type>
 <min>0</min>
 <max>100</max>
+```
 
 The Scale type indicates that the web page will display the sensor reading as a scale divided into three equal segments: red, yellow, and green.
 
@@ -74,18 +78,22 @@ Specifying the sensor type is optional.
 
 If you want to control switches through the web interface, add them to the following section:
 
+```xml
 <switches>
     <switch>
         <entityId>switch.light_room</entityId>
         <friendlyName>Lighting</friendlyName>
     </switch>
 </switches>
+```
 
 ---
 
 ## Update Interval
 
+```xml
 <updateIntervalSeconds>30</updateIntervalSeconds>
+```
 
 The minimum allowed value is 10 seconds.
 
@@ -93,7 +101,9 @@ The minimum allowed value is 10 seconds.
 
 ## Log Retention
 
+```xml
 <logRetentionDays>30</logRetentionDays>
+```
 
 Specifies how many days log files are retained.
 
@@ -101,8 +111,10 @@ Specifies how many days log files are retained.
 
 ## Display Area and Device Names
 
+```xml
 <showAreaNames>Y</showAreaNames>
 <showDeviceNames>Y</showDeviceNames>
+```
 
 Possible values:
 
