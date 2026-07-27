@@ -119,6 +119,75 @@
             padding: 15px;
             text-align: center;
         }
+
+        .scale-box {
+            margin-top: 8px;
+        }
+
+        .scale-scale {
+            position: relative;
+            width: 96%;
+            height: 26px;
+            border: 1px solid #888;
+        }
+
+        .scale-red {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 33%;
+            height: 100%;
+            background: #d00000;
+        }
+
+        .scale-yellow {
+            position: absolute;
+            left: 33%;
+            top: 0;
+            width: 34%;
+            height: 100%;
+            background: #d8d000;
+        }
+
+        .scale-green {
+            position: absolute;
+            left: 67%;
+            top: 0;
+            width: 33%;
+            height: 100%;
+            background: #009900;
+        }
+
+        .scale-marker {
+            position: absolute;
+            top: -8px;
+            width: 4px;
+            height: 42px;
+            background: #000;
+        }
+
+        .scale-value {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: white;
+        }
+
+        .scale-labels {
+            width: 96%;
+            overflow: hidden;
+            margin-top: 3px;
+            color: #ccc;
+        }
+
+        .scale-left {
+            float: left;
+        }
+
+        .scale-right {
+            float: right;
+        }
+
     </style>
 </head>
 <body>
@@ -160,6 +229,43 @@
                '</div>';
     }
 
+    function createscaleLevelHtml(sensor) {
+        var value = parseFloat(sensor.state);
+        var min = sensor.min !== undefined ? sensor.min : 0;
+        var max = sensor.max !== undefined ? sensor.max : 100;
+
+        if (isNaN(value))
+            value = min;
+
+        var clampedValue = value;
+        if (clampedValue < min) clampedValue = min;
+        if (clampedValue > max) clampedValue = max;
+
+        var percentage = 0;
+        if (max > min) {
+            percentage = ((clampedValue - min) / (max - min)) * 100;
+        }
+
+        var left = Math.round(percentage) + "%";
+
+        return '<div class="sensor">' +
+            '<div class="name">' + (sensor.friendlyName || sensor.entityId) + '</div>' +
+            '<div class="scale-box">' +
+            '<div class="scale-value">' + value + '</div>' +
+            '<div class="scale-scale">' +
+            '<div class="scale-red"></div>' +
+            '<div class="scale-yellow"></div>' +
+            '<div class="scale-green"></div>' +
+            '<div class="scale-marker" style="left:calc(' + left + ' - 2px);"></div>' +
+            '</div>' +
+            '<div class="scale-labels">' +
+            '<span class="scale-left">' + min + '</span>' +
+            '<span class="scale-right">' + max + '</span>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    }
+
     function updatePage(data) {
         var html = "";
 
@@ -184,13 +290,19 @@
             }
 
             var name = s.friendlyName || s.entityId;
-            var value = s.state || "—";
-            var margin = (showAreas || showDevices) ? "20px" : "0";
 
-            html += '<div class="sensor" style="margin-left:' + margin + '">' +
+            if (s.type === "Scale") {
+                html += createscaleLevelHtml(s);
+            }
+            else {
+                var value = s.state || "—";
+                var margin = (showAreas || showDevices) ? "20px" : "0";
+
+                html += '<div class="sensor" style="margin-left:' + margin + '">' +
                     '<div class="name">' + name + '</div>' +
                     '<div class="value">' + value + '</div>' +
                     '</div>';
+            }
         }
 
         //Only switchs

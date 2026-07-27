@@ -4,7 +4,7 @@
     <!-- Home Assistant Server Configuration -->
     
     <!-- The base URL of your Home Assistant instance (without port) -->
-    <homeAssistantServer>http://192.168.30.38</homeAssistantServer>
+    <homeAssistantServer>http://192.168.0.0</homeAssistantServer>
     
     <!-- The port on which Home Assistant is running (default is usually 8123) -->
     <homeAssistantPort>8123</homeAssistantPort>
@@ -25,6 +25,9 @@
             <entityId>sensor.waterlevelsensor_ultrasonicwaterlevelsensor</entityId>
             <friendlyName>Water level</friendlyName>
             <decimalPlaces>0</decimalPlaces>
+	    <type>Scale</type>
+	    <min>0</min>
+	    <max>100</max>
         </sensor>
 	    <sensor>
             <entityId>sensor.esphome_web_59d4f4_dht_1_outside_temperature</entityId>

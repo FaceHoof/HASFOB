@@ -56,6 +56,18 @@ Sensor parameters:
 |  friendlyName   | Display name                       |
 |  decimalPlaces  | Number of decimal places           |
 
+Additionally, you can specify the sensor type inside the sensor block:
+
+<type>Scale</type>
+<min>0</min>
+<max>100</max>
+
+The Scale type indicates that the web page will display the sensor reading as a scale divided into three equal segments: red, yellow, and green.
+
+The minimum and maximum values for the scale can also be configured as described above. The default minimum value is 0, and the default maximum value is 100.
+
+Specifying the sensor type is optional.
+
 ---
 
 ## Switches (Optional)
@@ -142,23 +154,23 @@ Under Windows, the application can be run either as a regular program or install
 
 To install the service, open a Command Prompt with Administrator privileges and run:
 
-HASFOB.exe --install
+HasfobService.exe --install
 
 or
 
-HASFOB.exe -i
+HasfobService.exe -i
 
 After installation, a Windows Service named HASFOB will be created and configured to start automatically when the system boots.
 
 To uninstall the service, run:
 
-HASFOB.exe --uninstall
+HasfobService.exe --uninstall
 
 or
 
-HASFOB.exe -u
+HasfobService.exe -u
 
-To run the application without installing it as a service, simply start HASFOB.exe without any command-line arguments.
+To run the application without installing it as a service, simply start HasfobService.exe without any command-line arguments.
 
 ---
 

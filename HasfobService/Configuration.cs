@@ -1,5 +1,11 @@
 using System.Xml.Serialization;
 
+public enum SensorType
+{
+    Default,
+    Scale
+}
+
 [XmlRoot("configuration")]
 public class Configuration
 {
@@ -64,6 +70,29 @@ public class SensorConfig
 
     [XmlElement("decimalPlaces")]
     public int? DecimalPlaces { get; set; }
+
+    [XmlElement("type")]
+    public string? RawType { get; set; }
+
+    [XmlElement("min")]
+    public double MinValue { get; set; } = 0;
+
+    [XmlElement("max")]
+    public double MaxValue { get; set; } = 100;
+
+    [XmlIgnore]
+    public SensorType Type
+    {
+        get
+        {
+            if (string.Equals(RawType, "Scale", StringComparison.OrdinalIgnoreCase) )
+            {
+                return SensorType.Scale;
+            }
+
+            return SensorType.Default;
+        }
+    }
 }
 
 public class SwitchConfig

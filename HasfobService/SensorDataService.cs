@@ -25,6 +25,9 @@ public record SensorDto
     public string? AreaName { get; set; }
     public string? DeviceName { get; set; }
     public string State { get; set; } = string.Empty;
+    public string Type { get; set; } = "Default";
+    public double Min { get; set; } = 0;
+    public double Max { get; set; } = 100;
 }
 
 public record SwitchDto
@@ -93,7 +96,7 @@ public class SensorDataService
         if ( File.Exists ( devPath ) )
             return File.ReadAllText ( devPath, Encoding.UTF8 );
 
-        throw new FileNotFoundException ( "WebPage.html not found" );
+        throw new FileNotFoundException ( "WebPage.html not found." );
     }
 
     public async Task InitializeAreasAndDevicesAsync ( HttpClient client )
@@ -330,22 +333,30 @@ public class SensorDataService
         }
     }
 
-    public List<SensorDto> GetAllSensors ( )
+    public List<SensorDto> GetAllSensors()
     {
-        lock ( _lock )
+        lock (_lock)
         {
-            return _sensors.Select ( kv => new SensorDto
+            return _sensors.Select(kv =>
             {
-                EntityId = kv.Key,
-                FriendlyName = kv.Value.FriendlyName,
-                AreaName = kv.Value.AreaName,
-                DeviceName = kv.Value.DeviceName,
-                State = kv.Value.State
-            } )
-            .OrderBy ( x => x.AreaName ?? "" )
-            .ThenBy ( x => x.DeviceName ?? "" )
-            .ThenBy ( x => x.FriendlyName ?? x.EntityId )
-            .ToList ( );
+                _sensorConfigs.TryGetValue(kv.Key, out var config);
+
+                return new SensorDto
+                {
+                    EntityId = kv.Key,
+                    FriendlyName = kv.Value.FriendlyName,
+                    AreaName = kv.Value.AreaName,
+                    DeviceName = kv.Value.DeviceName,
+                    State = kv.Value.State,
+                    Type = (config?.Type ?? SensorType.Default).ToString(),
+                    Min = config?.MinValue ?? 0,
+                    Max = config?.MaxValue ?? 100
+                };
+            })
+            .OrderBy(x => x.AreaName ?? "")
+            .ThenBy(x => x.DeviceName ?? "")
+            .ThenBy(x => x.FriendlyName ?? x.EntityId)
+            .ToList();
         }
     }
 
