@@ -31,6 +31,28 @@ public class Configuration
     [XmlElement("logRetentionDays")]
     public int LogRetentionDays { get; set; }
 
+    [XmlElement("offLog")]
+    public string OffLog { get; set; } = "N";
+
+    [XmlIgnore]
+    public bool IsLogDisabled => OffLog?.Trim().ToUpper() == "Y";
+
+    [XmlElement("maxLengthLogMessage")]
+    public string RawMaxLengthLogMessage { get; set; } = "200";
+
+    [XmlIgnore]
+    public int MaxLengthLogMessage
+    {
+        get
+        {
+            if (int.TryParse(RawMaxLengthLogMessage, out int result) && result > 0)
+            {
+                return result;
+            }
+            return 200;
+        }
+    }
+
     [XmlElement("showAreaNames")]
     public string ShowAreaNames { get; set; } = "Y";
 

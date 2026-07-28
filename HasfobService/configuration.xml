@@ -56,6 +56,12 @@
     <!-- Number of days to keep log files before automatic cleanup -->
     <logRetentionDays>30</logRetentionDays>
 
+    <!-- Disable logging, available options are N and Y. Does not affect old log retention deletion -->
+    <offLog>N</offLog>
+
+    <!-- Maximum length (in characters) of a single log message -->
+    <maxLengthLogMessage>200</maxLengthLogMessage>
+
     <showAreaNames>Y</showAreaNames>
     <showDeviceNames>Y</showDeviceNames>
 

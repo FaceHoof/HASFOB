@@ -99,96 +99,105 @@ public class SensorDataService
         throw new FileNotFoundException ( "WebPage.html not found." );
     }
 
-    public async Task InitializeAreasAndDevicesAsync ( HttpClient client )
+    public async Task InitializeAreasAndDevicesAsync(HttpClient client, CancellationToken cancellationToken = default)
     {
-        await InitializeAreasAsync ( client );
-        await InitializeDevicesAsync ( client );
+        await InitializeAreasAsync(client, cancellationToken);
+        await InitializeDevicesAsync(client, cancellationToken);
     }
 
-    private async Task InitializeAreasAsync ( HttpClient client )
+    private async Task InitializeAreasAsync(HttpClient client, CancellationToken cancellationToken)
     {
-        if ( !_config.ShowAreas ) return;
+        if (!_config.ShowAreas) return;
         try
         {
             var payload = new
             {
                 template = """
-                    {% set ns = namespace(result={}) %}
-                    {% for state in states.sensor %}
-                        {% set area = area_name(state.entity_id) %}
-                        {% if area and area != 'None' and area != 'null' %}
-                            {% set ns.result = dict(ns.result, **{state.entity_id: area}) %}
-                        {% endif %}
-                    {% endfor %}
-                    {{ ns.result | tojson }}
-                    """
+                {% set ns = namespace(result={}) %}
+                {% for state in states.sensor %}
+                    {% set area = area_name(state.entity_id) %}
+                    {% if area and area != 'None' and area != 'null' %}
+                        {% set ns.result = dict(ns.result, **{state.entity_id: area}) %}
+                    {% endif %}
+                {% endfor %}
+                {{ ns.result | tojson }}
+                """
             };
-            HttpResponseMessage response = await client.PostAsJsonAsync ( "/api/template", payload );
-            response.EnsureSuccessStatusCode ( );
-            string json = await response.Content.ReadAsStringAsync ( );
-            var areas = JsonSerializer.Deserialize<Dictionary<string, string>> ( json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true } );
-            
-            if ( areas?.Count > 0 )
+
+            HttpResponseMessage response = await client.PostAsJsonAsync("/api/template", payload, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            string json = await response.Content.ReadAsStringAsync(cancellationToken);
+            var areas = JsonSerializer.Deserialize<Dictionary<string, string>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (areas?.Count > 0)
             {
-                lock ( _lock )
+                lock (_lock)
                 {
-                    _entityToArea.Clear ( );
-                    foreach ( var kv in areas )
+                    _entityToArea.Clear();
+                    foreach (var kv in areas)
                     {
-                        if ( !string.IsNullOrWhiteSpace ( kv.Value ) )
-                            _entityToArea [ kv.Key ] = kv.Value.Trim ( );
+                        if (!string.IsNullOrWhiteSpace(kv.Value))
+                            _entityToArea[kv.Key] = kv.Value.Trim();
                     }
                 }
-                _logger.WriteLog ( $"Loaded areas for {areas.Count} sensors" );
+                _logger.WriteLog($"Loaded areas for {areas.Count} sensors");
             }
         }
-        catch ( Exception ex )
+        catch (OperationCanceledException)
         {
-            _logger.WriteLog ( $"Warning: Failed to initialize areas: {ex.Message}" );
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.WriteLog($"Warning: Failed to initialize areas: {ex.Message}");
         }
     }
 
-    private async Task InitializeDevicesAsync ( HttpClient client )
+    private async Task InitializeDevicesAsync(HttpClient client, CancellationToken cancellationToken)
     {
-        if ( !_config.ShowDevices )
-            return;
+        if (!_config.ShowDevices) return;
         try
         {
             var payload = new
             {
                 template = """
-                    {% set ns = namespace(result={}) %}
-                    {% for state in states.sensor %}
-                        {% set device = device_name(state.entity_id) %}
-                        {% if device and device != 'None' and device != 'null' %}
-                            {% set ns.result = dict(ns.result, **{state.entity_id: device}) %}
-                        {% endif %}
-                    {% endfor %}
-                    {{ ns.result | tojson }}
-                    """
+                {% set ns = namespace(result={}) %}
+                {% for state in states.sensor %}
+                    {% set device = device_name(state.entity_id) %}
+                    {% if device and device != 'None' and device != 'null' %}
+                        {% set ns.result = dict(ns.result, **{state.entity_id: device}) %}
+                    {% endif %}
+                {% endfor %}
+                {{ ns.result | tojson }}
+                """
             };
-            HttpResponseMessage response = await client.PostAsJsonAsync ( "/api/template", payload );
-            response.EnsureSuccessStatusCode ( );
-            string json = await response.Content.ReadAsStringAsync ( );
-            var devices = JsonSerializer.Deserialize<Dictionary<string, string>> ( json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true } );
-            
-            if ( devices?.Count > 0 )
+
+            HttpResponseMessage response = await client.PostAsJsonAsync("/api/template", payload, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            string json = await response.Content.ReadAsStringAsync(cancellationToken);
+            var devices = JsonSerializer.Deserialize<Dictionary<string, string>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (devices?.Count > 0)
             {
-                lock ( _lock )
+                lock (_lock)
                 {
-                    _entityToDevice.Clear ( );
-                    foreach ( var kv in devices )
+                    _entityToDevice.Clear();
+                    foreach (var kv in devices)
                     {
-                        if ( !string.IsNullOrWhiteSpace ( kv.Value ) )
-                            _entityToDevice [ kv.Key ] = kv.Value.Trim ( );
+                        if (!string.IsNullOrWhiteSpace(kv.Value))
+                            _entityToDevice[kv.Key] = kv.Value.Trim();
                     }
                 }
-                _logger.WriteLog ( $"Loaded devices for {devices.Count} sensors" );
+                _logger.WriteLog($"Loaded devices for {devices.Count} sensors");
             }
         }
-        catch ( Exception ex )
+        catch (OperationCanceledException)
         {
-            _logger.WriteLog ( $"Warning: Failed to initialize devices: {ex.Message}" );
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.WriteLog($"Warning: Failed to initialize devices: {ex.Message}");
         }
     }
 
