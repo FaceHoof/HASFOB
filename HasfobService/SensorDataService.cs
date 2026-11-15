@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -9,6 +10,7 @@ public record SensorInfo
     public string? DeviceName { get; set; }
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     public int? DecimalPlaces { get; set; }
+    public int MissedRequests { get; set; } = 0;
 }
 
 public record SwitchInfo
@@ -25,9 +27,7 @@ public record SensorDto
     public string? AreaName { get; set; }
     public string? DeviceName { get; set; }
     public string State { get; set; } = string.Empty;
-    public string Type { get; set; } = "Default";
-    public double Min { get; set; } = 0;
-    public double Max { get; set; } = 100;
+    public int MissedRequests { get; set; }
 }
 
 public record SwitchDto
@@ -99,105 +99,96 @@ public class SensorDataService
         throw new FileNotFoundException ( "WebPage.html not found." );
     }
 
-    public async Task InitializeAreasAndDevicesAsync(HttpClient client, CancellationToken cancellationToken = default)
+    public async Task InitializeAreasAndDevicesAsync ( HttpClient client )
     {
-        await InitializeAreasAsync(client, cancellationToken);
-        await InitializeDevicesAsync(client, cancellationToken);
+        await InitializeAreasAsync ( client );
+        await InitializeDevicesAsync ( client );
     }
 
-    private async Task InitializeAreasAsync(HttpClient client, CancellationToken cancellationToken)
+    private async Task InitializeAreasAsync ( HttpClient client )
     {
-        if (!_config.ShowAreas) return;
+        if ( !_config.ShowAreas ) return;
         try
         {
             var payload = new
             {
                 template = """
-                {% set ns = namespace(result={}) %}
-                {% for state in states.sensor %}
-                    {% set area = area_name(state.entity_id) %}
-                    {% if area and area != 'None' and area != 'null' %}
-                        {% set ns.result = dict(ns.result, **{state.entity_id: area}) %}
-                    {% endif %}
-                {% endfor %}
-                {{ ns.result | tojson }}
-                """
+                    {% set ns = namespace(result={}) %}
+                    {% for state in states.sensor %}
+                        {% set area = area_name(state.entity_id) %}
+                        {% if area and area != 'None' and area != 'null' %}
+                            {% set ns.result = dict(ns.result, **{state.entity_id: area}) %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ ns.result | tojson }}
+                    """
             };
-
-            HttpResponseMessage response = await client.PostAsJsonAsync("/api/template", payload, cancellationToken);
-            response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync(cancellationToken);
-            var areas = JsonSerializer.Deserialize<Dictionary<string, string>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (areas?.Count > 0)
+            HttpResponseMessage response = await client.PostAsJsonAsync ( "/api/template", payload );
+            response.EnsureSuccessStatusCode ( );
+            string json = await response.Content.ReadAsStringAsync ( );
+            var areas = JsonSerializer.Deserialize<Dictionary<string, string>> ( json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true } );
+            
+            if ( areas?.Count > 0 )
             {
-                lock (_lock)
+                lock ( _lock )
                 {
-                    _entityToArea.Clear();
-                    foreach (var kv in areas)
+                    _entityToArea.Clear ( );
+                    foreach ( var kv in areas )
                     {
-                        if (!string.IsNullOrWhiteSpace(kv.Value))
-                            _entityToArea[kv.Key] = kv.Value.Trim();
+                        if ( !string.IsNullOrWhiteSpace ( kv.Value ) )
+                            _entityToArea [ kv.Key ] = kv.Value.Trim ( );
                     }
                 }
-                _logger.WriteLog($"Loaded areas for {areas.Count} sensors");
+                _logger.WriteLog ( $"Loaded areas for {areas.Count} sensors" );
             }
         }
-        catch (OperationCanceledException)
+        catch ( Exception ex )
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.WriteLog($"Warning: Failed to initialize areas: {ex.Message}");
+            _logger.WriteLog ( $"Warning: Failed to initialize areas: {ex.Message}" );
         }
     }
 
-    private async Task InitializeDevicesAsync(HttpClient client, CancellationToken cancellationToken)
+    private async Task InitializeDevicesAsync ( HttpClient client )
     {
-        if (!_config.ShowDevices) return;
+        if ( !_config.ShowDevices )
+            return;
         try
         {
             var payload = new
             {
                 template = """
-                {% set ns = namespace(result={}) %}
-                {% for state in states.sensor %}
-                    {% set device = device_name(state.entity_id) %}
-                    {% if device and device != 'None' and device != 'null' %}
-                        {% set ns.result = dict(ns.result, **{state.entity_id: device}) %}
-                    {% endif %}
-                {% endfor %}
-                {{ ns.result | tojson }}
-                """
+                    {% set ns = namespace(result={}) %}
+                    {% for state in states.sensor %}
+                        {% set device = device_name(state.entity_id) %}
+                        {% if device and device != 'None' and device != 'null' %}
+                            {% set ns.result = dict(ns.result, **{state.entity_id: device}) %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ ns.result | tojson }}
+                    """
             };
-
-            HttpResponseMessage response = await client.PostAsJsonAsync("/api/template", payload, cancellationToken);
-            response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync(cancellationToken);
-            var devices = JsonSerializer.Deserialize<Dictionary<string, string>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (devices?.Count > 0)
+            HttpResponseMessage response = await client.PostAsJsonAsync ( "/api/template", payload );
+            response.EnsureSuccessStatusCode ( );
+            string json = await response.Content.ReadAsStringAsync ( );
+            var devices = JsonSerializer.Deserialize<Dictionary<string, string>> ( json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true } );
+            
+            if ( devices?.Count > 0 )
             {
-                lock (_lock)
+                lock ( _lock )
                 {
-                    _entityToDevice.Clear();
-                    foreach (var kv in devices)
+                    _entityToDevice.Clear ( );
+                    foreach ( var kv in devices )
                     {
-                        if (!string.IsNullOrWhiteSpace(kv.Value))
-                            _entityToDevice[kv.Key] = kv.Value.Trim();
+                        if ( !string.IsNullOrWhiteSpace ( kv.Value ) )
+                            _entityToDevice [ kv.Key ] = kv.Value.Trim ( );
                     }
                 }
-                _logger.WriteLog($"Loaded devices for {devices.Count} sensors");
+                _logger.WriteLog ( $"Loaded devices for {devices.Count} sensors" );
             }
         }
-        catch (OperationCanceledException)
+        catch ( Exception ex )
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.WriteLog($"Warning: Failed to initialize devices: {ex.Message}");
+            _logger.WriteLog ( $"Warning: Failed to initialize devices: {ex.Message}" );
         }
     }
 
@@ -210,48 +201,141 @@ public class SensorDataService
 
     public void UpdateSensor ( string entityId, string? rawState, string? haFriendlyName )
     {
-        if ( !IsAllowed ( entityId ) ) 
+        if (!IsAllowed ( entityId ))
             return;
 
-        SensorConfig sensorConfig = _sensorConfigs [ entityId ];
+        SensorConfig sensorConfig = _sensorConfigs[entityId];
         string? finalFriendlyName = sensorConfig.FriendlyName ?? haFriendlyName;
         string? areaName = null;
         string? deviceName = null;
 
-        if ( _config.ShowAreas )
+        if (_config.ShowAreas)
             _entityToArea.TryGetValue ( entityId, out areaName );
-        if ( _config.ShowDevices )
+        if (_config.ShowDevices)
             _entityToDevice.TryGetValue ( entityId, out deviceName );
 
-        string formattedState = FormatState ( rawState, sensorConfig.DecimalPlaces );
+        bool isNumeric = TryFormatNumericState ( rawState, sensorConfig.DecimalPlaces, out string formattedNumericState );
 
         bool shouldNotify = false;
-        lock ( _lock )
+        lock (_lock)
         {
+            _sensors.TryGetValue ( entityId, out var existing );
+
+            int missedRequests;
+            string finalState;
+
+            if (isNumeric)
+            {
+                //if correct data
+                missedRequests = 0;
+                finalState = formattedNumericState;
+            }
+            else
+            {
+                //if error or empty
+                int prevMissed = existing?.MissedRequests ?? 0;
+                missedRequests = prevMissed < int.MaxValue ? prevMissed + 1 : int.MaxValue;
+
+                //save before value
+                finalState = (existing != null && existing.State != "unknown") ? existing.State : "—";
+            }
+
             SensorInfo newInfo = new SensorInfo
             {
-                State = formattedState,
-                FriendlyName = finalFriendlyName,
-                AreaName = areaName,
-                DeviceName = deviceName,
+                State = finalState,
+                FriendlyName = finalFriendlyName ?? existing?.FriendlyName,
+                AreaName = areaName ?? existing?.AreaName,
+                DeviceName = deviceName ?? existing?.DeviceName,
                 DecimalPlaces = sensorConfig.DecimalPlaces,
-                LastUpdated = DateTime.UtcNow
+                LastUpdated = isNumeric ? DateTime.UtcNow : (existing?.LastUpdated ?? DateTime.UtcNow),
+                MissedRequests = missedRequests
             };
 
-            if ( !_sensors.TryGetValue ( entityId, out var existing ) ||
+            if (existing == null ||
                 existing.State != newInfo.State ||
                 existing.FriendlyName != newInfo.FriendlyName ||
                 existing.AreaName != newInfo.AreaName ||
-                existing.DeviceName != newInfo.DeviceName )
+                existing.DeviceName != newInfo.DeviceName ||
+                existing.MissedRequests != newInfo.MissedRequests)
             {
                 shouldNotify = true;
             }
 
-            _sensors [ entityId ] = newInfo;
+            _sensors[entityId] = newInfo;
         }
 
-        if ( shouldNotify )
+        if (shouldNotify)
             NotifyAllClients ( );
+    }
+
+    public void IncrementAllSensorsMissedRequests ( HashSet<string>? updatedEntityIds = null )
+    {
+        bool shouldNotify = false;
+
+        lock (_lock)
+        {
+            foreach (var kvp in _sensorConfigs)
+            {
+                string entityId = kvp.Key;
+
+                if (updatedEntityIds != null && updatedEntityIds.Contains ( entityId ))
+                    continue;
+
+                SensorConfig sensorConfig = kvp.Value;
+                _sensors.TryGetValue ( entityId, out var existing );
+
+                int prevMissed = existing?.MissedRequests ?? 0;
+                int newMissed = prevMissed < int.MaxValue ? prevMissed + 1 : int.MaxValue;
+
+                string? areaName = null;
+                string? deviceName = null;
+                if (_config.ShowAreas) _entityToArea.TryGetValue ( entityId, out areaName );
+                if (_config.ShowDevices) _entityToDevice.TryGetValue ( entityId, out deviceName );
+
+                _sensors[entityId] = new SensorInfo
+                {
+                    State = (existing != null && existing.State != "unknown") ? existing.State : "—",
+                    FriendlyName = sensorConfig.FriendlyName ?? existing?.FriendlyName,
+                    AreaName = areaName ?? existing?.AreaName,
+                    DeviceName = deviceName ?? existing?.DeviceName,
+                    DecimalPlaces = sensorConfig.DecimalPlaces,
+                    LastUpdated = existing?.LastUpdated ?? DateTime.UtcNow,
+                    MissedRequests = newMissed
+                };
+
+                if (existing == null || existing.MissedRequests != newMissed)
+                    shouldNotify = true;
+            }
+        }
+
+        if (shouldNotify)
+            NotifyAllClients ( );
+    }
+
+    private bool TryFormatNumericState ( string? state, int? decimalPlaces, out string formattedState )
+    {
+        formattedState = "—";
+
+        if (string.IsNullOrWhiteSpace ( state ))
+            return false;
+
+        if (!double.TryParse ( state, NumberStyles.Any, CultureInfo.InvariantCulture, out double value ) ||
+             double.IsNaN ( value ) || double.IsInfinity ( value ))
+        {
+            return false;
+        }
+
+        if (decimalPlaces.HasValue)
+        {
+            double rounded = Math.Round ( value, decimalPlaces.Value );
+            formattedState = rounded.ToString ( $"F{decimalPlaces.Value}", CultureInfo.InvariantCulture );
+        }
+        else
+        {
+            formattedState = value.ToString ( CultureInfo.InvariantCulture );
+        }
+
+        return true;
     }
 
     public void UpdateSwitch ( string entityId, string? rawState, string? haFriendlyName )
@@ -283,26 +367,6 @@ public class SensorDataService
         }
 
         NotifyAllClients ( );
-    }
-
-    private string FormatState ( string? state, int? decimalPlaces )
-    {
-        if ( string.IsNullOrWhiteSpace ( state ) )
-            return "—";
-
-        if ( !double.TryParse ( state, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out double value ) )
-        {
-            return state;
-        }
-
-        if ( decimalPlaces.HasValue )
-        {
-            double rounded = Math.Round ( value, decimalPlaces.Value );
-            return rounded.ToString ( $"F{decimalPlaces.Value}", System.Globalization.CultureInfo.InvariantCulture );
-        }
-
-        return value.ToString ( System.Globalization.CultureInfo.InvariantCulture );
     }
 
     private void NotifyAllClients ( )
@@ -342,30 +406,23 @@ public class SensorDataService
         }
     }
 
-    public List<SensorDto> GetAllSensors()
+    public List<SensorDto> GetAllSensors ( )
     {
         lock (_lock)
         {
-            return _sensors.Select(kv =>
+            return _sensors.Select ( kv => new SensorDto
             {
-                _sensorConfigs.TryGetValue(kv.Key, out var config);
-
-                return new SensorDto
-                {
-                    EntityId = kv.Key,
-                    FriendlyName = kv.Value.FriendlyName,
-                    AreaName = kv.Value.AreaName,
-                    DeviceName = kv.Value.DeviceName,
-                    State = kv.Value.State,
-                    Type = (config?.Type ?? SensorType.Default).ToString(),
-                    Min = config?.MinValue ?? 0,
-                    Max = config?.MaxValue ?? 100
-                };
-            })
-            .OrderBy(x => x.AreaName ?? "")
-            .ThenBy(x => x.DeviceName ?? "")
-            .ThenBy(x => x.FriendlyName ?? x.EntityId)
-            .ToList();
+                EntityId = kv.Key,
+                FriendlyName = kv.Value.FriendlyName,
+                AreaName = kv.Value.AreaName,
+                DeviceName = kv.Value.DeviceName,
+                State = kv.Value.State,
+                MissedRequests = kv.Value.MissedRequests
+            } )
+            .OrderBy ( x => x.AreaName ?? "" )
+            .ThenBy ( x => x.DeviceName ?? "" )
+            .ThenBy ( x => x.FriendlyName ?? x.EntityId )
+            .ToList ( );
         }
     }
 

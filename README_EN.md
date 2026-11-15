@@ -198,10 +198,17 @@ To display the command-line help, start the application with the -h parameter.
 ## System Requirements
 
 Software Requirements:
-Runtime: .NET 8 Runtime (or .NET 8 SDK for building)  
+
+Runtime: .NET 8 Runtime (or .NET 8 SDK for building)
+ 
 OS: Windows 10 / Windows Server 2016+ or Linux (Debian, Ubuntu, etc. with systemd)
+
 External Integration: Home Assistant (REST API, Long-Lived Access Token)
+
 Hardware Requirements:
+
 CPU: 1 GHz or faster (x64 / ARM64)
+
 RAM: 1 GB (Linux) / 2 GB (Windows)
+
 Disk Space: ~150 MB (for .NET Runtime and application)

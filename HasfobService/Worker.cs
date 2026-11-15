@@ -30,127 +30,82 @@ public class Worker : BackgroundService
         }
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync ( CancellationToken stoppingToken )
     {
-        _logger.WriteLog("HASFOB Service started");
+        _logger.WriteLog ( "HASFOB Service started" );
 
-        HttpClient client = _httpClientFactory.CreateClient();
-        client.BaseAddress = new Uri(_config.HomeAssistantBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-        client.Timeout = TimeSpan.FromSeconds(10);
+        HttpClient client = _httpClientFactory.CreateClient ( );
+        client.BaseAddress = new Uri ( _config.HomeAssistantBaseUrl );
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue ( "Bearer", _token );
+        client.Timeout = TimeSpan.FromSeconds ( 30 );
 
-        try
-        {
-            await _dataService.InitializeAreasAndDevicesAsync(client, stoppingToken);
-            _logger.WriteLog("Areas and devices loaded successfully");
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.WriteLog("Service cancellation requested during initialization.");
-            return;
-        }
-        catch (Exception ex)
-        {
-            _logger.WriteLog($"Initialization error: {ex.Message}");
-        }
+        await _dataService.InitializeAreasAndDevicesAsync ( client );
+        _logger.WriteLog ( "Areas and devices loaded successfully" );
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                List<string> logEntries = new List<string>();
+                HttpResponseMessage response = await client.GetAsync ( "/api/states", stoppingToken );
+                response.EnsureSuccessStatusCode ( );
 
-                foreach (SensorConfig sensorConfig in _config.Sensors)
+                string json = await response.Content.ReadAsStringAsync ( stoppingToken );
+                using JsonDocument doc = JsonDocument.Parse ( json );
+
+                List<string> logEntries = new List<string> ( );
+                HashSet<string> processedSensors = new HashSet<string> ( StringComparer.OrdinalIgnoreCase );
+
+                foreach (JsonElement entity in doc.RootElement.EnumerateArray ( ))
                 {
-                    stoppingToken.ThrowIfCancellationRequested();
+                    string? entityId = entity.GetProperty ( "entity_id" ).GetString ( );
+                    if (string.IsNullOrEmpty ( entityId ))
+                        continue;
 
-                    await FetchAndProcessEntityAsync(client, sensorConfig.EntityId, isSensor: true, logEntries, stoppingToken);
-                }
+                    string? state = entity.GetProperty ( "state" ).GetString ( );
+                    string? friendlyName = null;
 
-                if (_config.Switches != null)
-                {
-                    foreach (var switchConfig in _config.Switches)
+                    if (entity.TryGetProperty ( "attributes", out JsonElement attributes ))
                     {
-                        stoppingToken.ThrowIfCancellationRequested();
+                        if (attributes.TryGetProperty ( "friendly_name", out JsonElement fnElement ))
+                            friendlyName = fnElement.GetString ( );
+                    }
 
-                        await FetchAndProcessEntityAsync(client, switchConfig.EntityId, isSensor: false, logEntries, stoppingToken);
+                    if (entityId.StartsWith ( "sensor." ) && _dataService.IsAllowed ( entityId ))
+                    {
+                        _dataService.UpdateSensor ( entityId, state, friendlyName );
+                        processedSensors.Add ( entityId );
+                        string displayName = friendlyName ?? entityId;
+                        logEntries.Add ( $"{entityId} - {state} ({displayName})" );
+                    }
+                    else if (entityId.StartsWith ( "switch." ) && _dataService.IsSwitchAllowed ( entityId ))
+                    {
+                        _dataService.UpdateSwitch ( entityId, state, friendlyName );
+                        string displayName = friendlyName ?? entityId;
+                        logEntries.Add ( $"{entityId} - {state} ({displayName})" );
                     }
                 }
 
+                _dataService.IncrementAllSensorsMissedRequests ( processedSensors );
+
                 if (logEntries.Count > 0)
                 {
-                    string logMessage = $"New data received ({logEntries.Count} configured entities):\n" + string.Join("\n", logEntries);
-                    _logger.WriteLog(logMessage);
+                    string logMessage = "New data received:\n" + string.Join ( "\n", logEntries );
+                    _logger.WriteLog ( logMessage );
                 }
                 else
                 {
-                    _logger.WriteLog("New data received: no configured sensors or switches found");
+                    _logger.WriteLog ( "New data received: no configured sensors or switches found" );
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                break;
             }
             catch (Exception ex)
             {
-                _logger.WriteLog($"Error fetching data from Home Assistant: {ex.Message}");
+                _logger.WriteLog ( $"Error fetching data from Home Assistant: {ex.Message}" );
+                _dataService.IncrementAllSensorsMissedRequests ( );
             }
 
-            try
-            {
-                await Task.Delay(TimeSpan.FromSeconds(_config.UpdateIntervalSeconds), stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
+            await Task.Delay ( TimeSpan.FromSeconds ( _config.UpdateIntervalSeconds ), stoppingToken );
         }
 
-        _logger.WriteLog("HASFOB Service stopped");
-    }
-
-    private async Task FetchAndProcessEntityAsync(HttpClient client, string entityId, bool isSensor, List<string> logEntries, CancellationToken stoppingToken)
-    {
-        try
-        {
-            HttpResponseMessage response = await client.GetAsync($"/api/states/{entityId}", stoppingToken);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                _logger.WriteLog($"Warning: Entity {entityId} not found in Home Assistant");
-                return;
-            }
-
-            response.EnsureSuccessStatusCode();
-
-            string json = await response.Content.ReadAsStringAsync(stoppingToken);
-            using JsonDocument doc = JsonDocument.Parse(json);
-            JsonElement root = doc.RootElement;
-
-            string? state = root.GetProperty("state").GetString();
-            string? friendlyName = null;
-
-            if (root.TryGetProperty("attributes", out JsonElement attributes))
-            {
-                if (attributes.TryGetProperty("friendly_name", out JsonElement fnElement))
-                    friendlyName = fnElement.GetString();
-            }
-
-            if (isSensor)
-            {
-                _dataService.UpdateSensor(entityId, state, friendlyName);
-            }
-            else
-            {
-                _dataService.UpdateSwitch(entityId, state, friendlyName);
-            }
-
-            string displayName = friendlyName ?? entityId;
-            logEntries.Add($"{entityId} - {state} ({displayName})");
-        }
-        catch (Exception ex)
-        {
-            _logger.WriteLog($"Failed to update {entityId}: {ex.Message}");
-        }
+        _logger.WriteLog ( "HASFOB Service stopped" );
     }
 }

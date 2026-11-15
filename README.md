@@ -184,10 +184,17 @@ chmod +x HasfobService
 ## Системные требования
 
 Программные требования:
-Среда выполнения: .NET 8 Runtime (или .NET 8 SDK для сборки)  
+
+Среда выполнения: .NET 8 Runtime (или .NET 8 SDK для сборки) 
+ 
 ОС: Windows 10 / Windows Server 2016+ или Linux (Debian, Ubuntu и др. с systemd)
+
 Внешняя интеграция: Home Assistant (REST API, Long-Lived Access Token)
+
 Аппаратные требования (Hardware):
+
 Процессор: 1 ГГц или быстрее (x64 / ARM64)
+
 Оперативная память (RAM): 1 ГБ (Linux) / 2 ГБ (Windows)
+
 Дисковое пространство: ~150 МБ (под .NET Runtime и приложение)
